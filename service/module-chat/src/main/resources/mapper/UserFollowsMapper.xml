@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="xyz.Brownie.mapper.UserFollowsMapper">
+
+    <resultMap id="BaseResultMap" type="xyz.Brownie.bean.entity.UserFollows">
+            <id property="id" column="id" jdbcType="BIGINT"/>
+            <result property="userId" column="user_id" jdbcType="BIGINT"/>
+            <result property="followsId" column="follows_id" jdbcType="BIGINT"/>
+            <result property="status" column="status" jdbcType="TINYINT"/>
+            <result property="createTime" column="create_time" jdbcType="TIMESTAMP"/>
+            <result property="isDelete" column="is_delete" jdbcType="TINYINT"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,user_id,follows_id,
+        status,create_time,is_delete
+    </sql>
+
+    <select id="getFollowsListByUserId" resultType="xyz.Brownie.bean.entity.User">
+        SELECT u.*
+        FROM user u
+                 JOIN user_follows uf ON u.id = uf.follows_id
+        WHERE uf.user_id = #{userId}
+    </select>
+</mapper>
