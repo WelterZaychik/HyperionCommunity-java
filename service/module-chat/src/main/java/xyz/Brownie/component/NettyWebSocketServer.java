@@ -62,6 +62,7 @@ public class NettyWebSocketServer {
         private String text;
         private long timestamp;
         private boolean delivered;
+        private String avatar; // 添加头像字段
     }
 
     @Data
@@ -72,6 +73,7 @@ public class NettyWebSocketServer {
         private String fromName;
         private String text;
         private long timestamp;
+        private String avatar; // 添加头像字段
     }
 
     @PostConstruct
@@ -139,9 +141,41 @@ public class NettyWebSocketServer {
                 case "message":
                     handleChatMessage(ctx, obj);
                     break;
+                case "deleteHistory":
+                    handleDeleteHistoryRequest(ctx, obj);
+                    break;
                 default:
                     sendErrorResponse(ctx, "Unsupported message type: " + type);
             }
+        }
+        
+        private void handleDeleteHistoryRequest(ChannelHandlerContext ctx, JSONObject obj) {
+            String account = obj.getStr("account");
+            String withAccount = obj.getStr("withAccount");
+
+            if (account == null || withAccount == null) {
+                sendErrorResponse(ctx, "Both account and withAccount are required");
+                return;
+            }
+
+            // 删除与这两个账户相关的所有消息记录
+            messageStore.removeIf(msg -> 
+                (msg.getFrom().equals(account) && msg.getTo().equals(withAccount)) ||
+                (msg.getFrom().equals(withAccount) && msg.getTo().equals(account))
+            );
+
+            // 删除相关的通知
+            Map<String, Notification> userNotificationsMap = userNotifications.get(account);
+            if (userNotificationsMap != null) {
+                userNotificationsMap.remove(withAccount);
+            }
+
+            // 发送成功响应 - 使用sendMessage代替sendSuccessResponse，避免添加Response后缀
+            JSONObject response = new JSONObject();
+            response.put("type", "deleteHistory");
+            response.put("status", "success");
+            response.put("message", "History messages deleted successfully");
+            sendMessage(response.toString(), ctx);
         }
 
         private String getAccountFromMessage(JSONObject obj) {
@@ -175,6 +209,7 @@ public class NettyWebSocketServer {
             String from = obj.getStr("from");
             String to = obj.getStr("to");
             String text = obj.getStr("text");
+            String avatar = obj.getStr("avatar", ""); // 获取头像信息，如果没有则使用空字符串
 
             if (from == null || to == null || text == null) {
                 sendErrorResponse(ctx, "Missing required fields (from, to, text)");
@@ -186,7 +221,7 @@ public class NettyWebSocketServer {
                 return;
             }
 
-            Message message = createMessage(from, to, text);
+            Message message = createMessage(from, to, text, avatar);
             storeMessage(message);
 
             // 创建并存储通知 - 这将确保接收者能在消息列表中看到消息
@@ -195,7 +230,8 @@ public class NettyWebSocketServer {
                     message.getFrom(),
                     message.getFromName(),
                     message.getText(),
-                    message.getTimestamp()
+                    message.getTimestamp(),
+                    message.getAvatar() // 传递头像信息
             );
             storeNotification(to, notification);
 
@@ -207,7 +243,7 @@ public class NettyWebSocketServer {
             sendSuccessResponse(ctx, "message", "Message sent");
         }
 
-        private Message createMessage(String from, String to, String text) {
+        private Message createMessage(String from, String to, String text, String avatar) {
             String fromName = getUserName(from);
             String toName = getUserName(to);
 
@@ -219,7 +255,8 @@ public class NettyWebSocketServer {
                     toName,
                     text,
                     System.currentTimeMillis(),
-                    false
+                    false,
+                    avatar
             );
         }
 
@@ -279,6 +316,20 @@ public class NettyWebSocketServer {
                     log.info("向用户[{}]发送了{}条离线消息", account, messages.size());
                 }
             }
+            
+            // 新增：发送离线通知给上线用户
+            Map<String, Notification> notifications = userNotifications.remove(account);
+            if (notifications != null && !notifications.isEmpty()) {
+                UserInfo user = userConnections.get(account);
+                if (user != null) {
+                    // 构建包含所有离线通知的响应
+                    JSONObject response = new JSONObject();
+                    response.put("type", "notifications");
+                    response.put("notifications", convertNotificationsToJson(new ArrayList<>(notifications.values())));
+                    sendMessage(response.toString(), user.getCtx());
+                    log.info("向用户[{}]发送了{}条离线通知", account, notifications.size());
+                }
+            }
         }
 
         private void sendNotificationAlert(String toAccount, Notification notification) {
@@ -291,9 +342,11 @@ public class NettyWebSocketServer {
                 alert.put("message", convertMessageToJson(createMessage(
                         notification.getFrom(), 
                         toAccount, 
-                        notification.getText()
+                        notification.getText(),
+                        "" // 添加空的avatar参数，因为通知中没有头像信息
                 )));
                 sendMessage(alert.toString(), user.getCtx());
+                log.info("向用户[{}]发送通知提醒", toAccount);
             }
         }
 
@@ -359,6 +412,7 @@ public class NettyWebSocketServer {
             json.put("text", message.getText());
             json.put("timestamp", message.getTimestamp());
             json.put("delivered", message.isDelivered());
+            json.put("avatar", message.getAvatar()); // 添加头像字段
             return json;
         }
 

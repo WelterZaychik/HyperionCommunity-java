@@ -1,11 +1,16 @@
 package xyz.Brownie.controller;
 
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import xyz.Brownie.constants.ResponseCode;
 import xyz.Brownie.utils.Result;
 import xyz.Brownie.bean.entity.User;
 import xyz.Brownie.service.UserService;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 
 @RestController
@@ -72,6 +77,26 @@ public class UserController {
         return userService.logout(account);
     }
 
+    // 根据account查询用户信息
+    @GetMapping("/info")
+    public Result getUserInfo(@RequestParam("account") String account) {
+        try {
+            List<User> users = userService.list(Wrappers.<User>lambdaQuery().eq(User::getAccount, account));
+            if (users != null && !users.isEmpty()) {
+                User user = users.get(0);
+                // 创建一个只包含需要信息的对象，避免返回敏感信息
+                Map<String, Object> userInfo = new HashMap<>();
+                userInfo.put("account", user.getAccount());
+                userInfo.put("name", user.getName());
+                userInfo.put("avatar", user.getAvatar());
+                return Result.suc(ResponseCode.Code200, userInfo);
+            } else {
+                return Result.fail(ResponseCode.Code404,null);
+            }
+        } catch (Exception e) {
+            return Result.fail(ResponseCode.CodeDefault, null);
+        }
+    }
 
     /**
      * user-follows模块需求
