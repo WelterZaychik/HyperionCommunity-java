@@ -11,7 +11,7 @@ import xyz.Brownie.service.UserFollowsService;
  * @author AI Assistant
  */
 @RestController
-@RequestMapping("/friendships")
+@RequestMapping("/follows")
 @CrossOrigin
 public class UserFollowsController {
 
@@ -20,32 +20,24 @@ public class UserFollowsController {
 
     /**
      * 添加关注关系
-     * @param userFollows 好友关系对象
+     * @param userFollows 关注对象
      * @return 操作结果
      */
     @PostMapping
     public Result addFollows(@RequestBody UserFollowsDto userFollows) {
-
-
         return userFollowsService.addFollows(userFollows);
-
     }
 
     /**
-     * 根据ID删除好友关系
-     * @param id 好友关系ID
+     * 取消关注
+     * @param userFollows 被取消者id
      * @return 操作结果
      */
-//    @DeleteMapping("/{id}")
-//    public Result deleteFriendship(@PathVariable Long id) {
-//
-//        boolean remove = friendshipsService.removeById(id);
-//        if (remove) {
-//            return Result.suc(200, "删除好友关系成功");
-//        } else {
-//            return Result.fail(402, "删除好友关系失败");
-//        }
-//    }
+    @DeleteMapping
+    public Result removeFollows(@RequestBody UserFollowsDto userFollows) {
+       return userFollowsService.removeFollows(userFollows);
+    }
+
 
     /**
      * 更新好友关系
@@ -74,8 +66,8 @@ public class UserFollowsController {
 //    }
 
     /**
-     * 查询所有好友关系列表
-     * @return 好友关系列表
+     * 查询所有关注关系列表
+     * @return 关注关系列表
      */
     @GetMapping("/{id}")
     public Result getFollowsList(@PathVariable Long id) {

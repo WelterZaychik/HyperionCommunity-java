@@ -22,6 +22,6 @@
         SELECT u.*
         FROM user u
                  JOIN user_follows uf ON u.id = uf.follows_id
-        WHERE uf.user_id = #{userId}
+        WHERE uf.user_id = #{userId} and uf.is_delete = 0 AND uf.status &lt; 2
     </select>
 </mapper>

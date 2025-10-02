@@ -11,7 +11,10 @@ import xyz.Brownie.utils.Result;
 * @createDate 2025-09-27 15:01:59
 */
 public interface UserFollowsService extends IService<UserFollows> {
+
     Result getFollowsListByUserId(Long id);
 
     Result addFollows(UserFollowsDto userFollows);
+
+    Result removeFollows(UserFollowsDto userFollows);
 }

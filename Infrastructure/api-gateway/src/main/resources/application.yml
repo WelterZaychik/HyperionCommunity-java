@@ -42,4 +42,9 @@ spring:
             predicates:
               - Path=/tag/**
 
+          - id: service-chat
+            uri: http://localhost:9090
+            predicates:
+              - Path=/follows/**
+
 
